@@ -2,16 +2,19 @@
    큰 화면에서는 가운데 한 칸으로만 넓어집니다. */
 
 :root {
-  --bg: #0f1020;
-  --bg2: #191b35;
-  --card: #21243f;
-  --line: #2f3358;
-  --ink: #f2f3fb;
-  --muted: #9aa0c6;
-  --brand: #7c8cff;
-  --ok: #34d399;
-  --warn: #fbbf24;
-  --miss: #fb7185;
+  --bg: #fcfaf5;        /* Cloud Dancer 계열 웜 화이트 */
+  --bg2: #dff5f1;       /* 젤리 민트 */
+  --bg3: #ffebd9;       /* 피치 */
+  --card: #ffffff;
+  --line: #e7e3d9;
+  --ink: #1c1f2b;
+  --muted: #6b7080;
+  --brand: #0a8582;     /* Transformative Teal */
+  --brand-soft: #e3f4f2;
+  --ok: #178f4b;
+  --warn: #ffb627;      /* 버터 옐로우 — 막대·테두리용 */
+  --warn-ink: #a8650a;  /* 같은 색의 글자용 (흰 배경 대비 확보) */
+  --miss: #dc3f5c;
   --radius: 16px;
 }
 
@@ -23,7 +26,10 @@
 
 html, body {
   margin: 0;
-  background: radial-gradient(900px 600px at 50% -10%, var(--bg2), var(--bg));
+  background:
+    radial-gradient(720px 440px at 12% -8%, var(--bg2), transparent 70%),
+    radial-gradient(620px 400px at 96% -4%, var(--bg3), transparent 70%),
+    var(--bg);
   color: var(--ink);
   font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
                Pretendard, "Malgun Gothic", sans-serif;
@@ -66,7 +72,7 @@ button {
   font: inherit; font-weight: 700; border: 0; border-radius: 14px;
   width: 100%; padding: 17px; cursor: pointer;
 }
-.primary { background: var(--brand); color: #0e1030; }
+.primary { background: var(--brand); color: #fff; box-shadow: 0 6px 16px rgba(10,133,130,.22); }
 .primary:disabled { background: var(--line); color: var(--muted); cursor: default; }
 .ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); }
 .actions { display: grid; gap: 10px; margin-top: 26px; }
@@ -87,7 +93,7 @@ button {
   transition: transform .06s ease, border-color .15s ease;
 }
 .choice:active { transform: scale(.985); }
-.choice[aria-pressed="true"] { border-color: var(--brand); background: #2a2f5c; }
+.choice[aria-pressed="true"] { border-color: var(--brand); background: var(--brand-soft); }
 
 /* 슬라이더 */
 .slider-out {
@@ -104,12 +110,13 @@ input[type=range]::-webkit-slider-runnable-track {
 }
 input[type=range]::-webkit-slider-thumb {
   -webkit-appearance: none; width: 34px; height: 34px; margin-top: -13px;
-  border-radius: 50%; background: var(--brand); border: 4px solid var(--bg);
+  border-radius: 50%; background: var(--brand); border: 4px solid #fff;
+  box-shadow: 0 2px 8px rgba(10,133,130,.35);
 }
 input[type=range]::-moz-range-track { height: 8px; border-radius: 99px; background: var(--line); }
 input[type=range]::-moz-range-thumb {
   width: 30px; height: 30px; border-radius: 50%; background: var(--brand);
-  border: 4px solid var(--bg);
+  border: 4px solid #fff; box-shadow: 0 2px 8px rgba(10,133,130,.35);
 }
 .slider-ends {
   display: flex; justify-content: space-between;
@@ -120,6 +127,7 @@ input[type=range]::-moz-range-thumb {
 .score-card {
   background: var(--card); border: 1px solid var(--line);
   border-radius: 22px; padding: 28px 20px; text-align: center; margin-bottom: 16px;
+  box-shadow: 0 4px 14px rgba(28,31,43,.06);
 }
 .grade-emoji { font-size: 44px; line-height: 1; }
 .score {
@@ -131,7 +139,7 @@ input[type=range]::-moz-range-thumb {
 
 /* 결과 — 촌평 */
 .ai {
-  background: linear-gradient(135deg, #2a2f5c, #21243f);
+  background: linear-gradient(135deg, var(--bg2), var(--bg3));
   border: 1px solid var(--line); border-radius: var(--radius);
   padding: 16px 17px; font-size: 14.5px; margin-bottom: 16px;
 }
@@ -142,6 +150,7 @@ input[type=range]::-moz-range-thumb {
 .card {
   background: var(--card); border: 1px solid var(--line);
   border-radius: var(--radius); padding: 18px 17px; margin-bottom: 12px;
+  box-shadow: 0 1px 3px rgba(28,31,43,.05);
 }
 .card h3 { font-size: 15px; margin: 0 0 4px; line-height: 1.45; }
 .react { font-size: 13px; color: var(--muted); margin: 0 0 14px; }
@@ -172,7 +181,7 @@ input[type=range]::-moz-range-thumb {
 }
 .pill.real { border-color: var(--ok); color: var(--ok); font-weight: 700; }
 .pill.mine { border-color: var(--miss); color: var(--miss); }
-.pill.both { border-color: var(--ok); background: rgba(52,211,153,.14); color: var(--ok); font-weight: 700; }
+.pill.both { border-color: var(--ok); background: rgba(23,143,75,.12); color: var(--ok); font-weight: 700; }
 
 /* 슬라이더 결과 — 손잡이가 정답으로 움직입니다 */
 .track { position: relative; height: 34px; margin: 2px 0 12px; }
@@ -186,7 +195,7 @@ input[type=range]::-moz-range-thumb {
 }
 .track .ghost { background: var(--line); border: 2px solid var(--muted); }
 .track .live {
-  background: var(--ok); box-shadow: 0 0 0 4px rgba(52,211,153,.18);
+  background: var(--ok); box-shadow: 0 0 0 4px rgba(23,143,75,.18);
   transition: left 1s cubic-bezier(.22,1,.36,1);
 }
 
@@ -212,6 +221,7 @@ details[open] summary::after { content: " ▴"; }
   border-radius: 16px; padding: 16px 14px; text-align: left;
   display: flex; flex-direction: column; gap: 4px; min-height: 132px;
   position: relative; transition: transform .06s ease, border-color .15s ease;
+  box-shadow: 0 1px 3px rgba(28,31,43,.05);
 }
 .tcard:active { transform: scale(.985); }
 .tcard.done { border-color: var(--ok); }
@@ -234,7 +244,7 @@ details[open] summary::after { content: " ▴"; }
   padding: 14px 16px; font-size: 12.5px; color: var(--muted);
   line-height: 1.65; margin: 4px 0 10px;
 }
-.caveat b { color: var(--warn); }
+.caveat b { color: var(--warn-ink); }
 #source a { color: var(--muted); }
 
 @media (min-width: 420px) { .grid { gap: 12px; } }
