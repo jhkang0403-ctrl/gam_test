@@ -5,7 +5,7 @@
   "blurb": "나라별 기대수명 1950~현재",
   "source": "Our World in Data",
   "source_url": "https://ourworldindata.org/grapher/life-expectancy",
-  "caveat": "",
+  "caveat": "이 데이터에는 OWID_LIC(저소득국)·OWID_AFR(아프리카) 같은 집계치 코드가 섞여 있어 국가 순위를 낼 때 걸러냈습니다. 최신 연도는 2023년으로, 그 이후 값은 아직 없습니다.",
   "questions": [
     {
       "id": "l1",

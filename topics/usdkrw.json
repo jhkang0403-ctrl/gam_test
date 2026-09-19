@@ -5,7 +5,7 @@
   "blurb": "1999년부터 오늘까지의 원달러 환율",
   "source": "Frankfurter (유럽중앙은행 고시)",
   "source_url": "https://frankfurter.dev/",
-  "caveat": "",
+  "caveat": "이 데이터는 유럽중앙은행(ECB) 고시 기준환율입니다. 시작일이 1999-01-04라서 1997~98년 외환위기 구간이 통째로 빠져 있습니다.",
   "questions": [
     {
       "id": "x1",
