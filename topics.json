@@ -53,6 +53,20 @@
   ],
   "topics": [
     {
+      "id": "korea-japan",
+      "emoji": "⚽",
+      "title": "한일전, 누가 더 이겼나",
+      "blurb": "1949년부터 2026년까지 한국 축구 A매치 1010경기",
+      "source": "martj42/international_results (GitHub)"
+    },
+    {
+      "id": "wiki",
+      "emoji": "📖",
+      "title": "우리는 위키백과에서 뭘 찾아봤나",
+      "blurb": "2024~2025년 한국어 위키백과 월간 조회수 상위 1000 문서",
+      "source": "Wikimedia Pageviews API"
+    },
+    {
       "id": "seoul-heat",
       "emoji": "🌡️",
       "title": "서울은 얼마나 더워졌나",

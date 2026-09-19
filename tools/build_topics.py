@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""공개 데이터 → 10주제 × 5문항.
+"""공개 데이터 → 12주제 (5문항 또는 10문항).
 
 **모든 숫자는 raw/ 의 원본에서 계산합니다.** 지어낸 값이 하나도 없어야 합니다.
 결과는 앱이 읽는 topics/*.json 과, 사람이 읽는 tools/정답지.md 로 나갑니다.
@@ -75,6 +75,270 @@ def choice(qid, text, options, answer, basis, why):
     assert answer in options, f"{qid}: 정답이 선택지에 없습니다"
     return {"id": qid, "type": "choice", "text": text, "options": options,
             "answer": answer, "basis": basis, "why": why}
+
+
+# ════════════════════════════════════════════════════════════════
+# 새 주제 두 개 — 목록 맨 위에 두려고 기존 1번보다 앞에 놓았다
+# ════════════════════════════════════════════════════════════════
+
+# ── 0-1. 한일전 ──────────────────────────────────────────────────
+# 자원봉사자가 정리한 FIFA A매치 기록. 협회 공식 집계와 경기 수가 다르다.
+KR, JP, CN = "South Korea", "Japan", "China"
+FB = load_csv("football_results.csv")
+
+
+def played(team, rows=FB):
+    return [r for r in rows if team in (r["home_team"], r["away_team"])]
+
+
+def score(r, team):
+    """(우리 골, 상대 골) — 홈·원정을 가려서 돌려준다."""
+    h, a = int(r["home_score"]), int(r["away_score"])
+    return (h, a) if r["home_team"] == team else (a, h)
+
+
+def wdl(rows, team):
+    w = sum(1 for r in rows if score(r, team)[0] > score(r, team)[1])
+    d = sum(1 for r in rows if score(r, team)[0] == score(r, team)[1])
+    return w, d, len(rows) - w - d
+
+
+def wdl_text(rows, team):
+    w, d, l = wdl(rows, team)
+    return f"{w}승 {d}무 {l}패"
+
+
+def opponent(r, team):
+    return r["away_team"] if r["home_team"] == team else r["home_team"]
+
+
+KR_ALL = played(KR)
+KJ = played(JP, KR_ALL)
+KC = played(CN, KR_ALL)
+kj_w, kj_d, kj_l = wdl(KJ, KR)
+kj_first = KJ[0]
+kj_first_y = int(kj_first["date"][:4])
+_fs = score(kj_first, KR)
+kj_first_text = (f"한국 {_fs[0]}-{_fs[1]} 승" if _fs[0] > _fs[1]
+                 else f"일본 {_fs[1]}-{_fs[0]} 승" if _fs[1] > _fs[0]
+                 else f"{_fs[0]}-{_fs[1]} 무승부")
+kj_last10 = KJ[-10:]
+kj_last10_text = wdl_text(kj_last10, KR)
+kj_last_date = KJ[-1]["date"]
+opp_count = Counter(opponent(r, KR) for r in KR_ALL).most_common(3)
+opp_name = {"Japan": "일본", "China": "중국", "Iran": "이란", "Thailand": "태국",
+            "Malaysia": "말레이시아", "Indonesia": "인도네시아"}
+top_opp = opp_name.get(opp_count[0][0], opp_count[0][0])
+kc_w, kc_d, kc_l = wdl(KC, KR)
+kc_losses = [r for r in KC if score(r, KR)[0] < score(r, KR)[1]]
+WC_KR = [r for r in KR_ALL if r["tournament"] == "FIFA World Cup"]
+WC_JP = [r for r in played(JP) if r["tournament"] == "FIFA World Cup"]
+wc_kr_w = wdl(WC_KR, KR)[0]
+wc_jp_w = wdl(WC_JP, JP)[0]
+wc_cmp = ("한국이 많다" if wc_kr_w > wc_jp_w
+          else "일본이 많다" if wc_jp_w > wc_kr_w else "같다")
+big_win = max(KR_ALL, key=lambda r: score(r, KR)[0] - score(r, KR)[1])
+_bw = score(big_win, KR)
+big_loss = min(KR_ALL, key=lambda r: score(r, KR)[0] - score(r, KR)[1])
+_bl = score(big_loss, KR)
+
+topic(
+    "korea-japan", "⚽", "한일전, 누가 더 이겼나",
+    f"1949년부터 {KR_ALL[-1]['date'][:4]}년까지 한국 축구 A매치 {len(KR_ALL)}경기",
+    "martj42/international_results (GitHub)",
+    "https://github.com/martj42/international_results",
+    [
+        slider("f1", "한국 축구 국가대표는 일본과 A매치를 몇 번 했을까요?",
+               len(KJ), "경기", 0, 150, 1,
+               f"이 기록 기준 {kj_first_y}~{kj_last_date[:4]}년 {len(KJ)}경기",
+               "기억에 남는 경기는 열 손가락 안이지만, 실제 경기 수는 그 몇 배입니다."),
+        slider("f2", f"그 {len(KJ)}경기 중 한국이 이긴 경기는 몇 번일까요?",
+               kj_w, "승", 0, len(KJ), 1,
+               f"{kj_w}승 {kj_d}무 {kj_l}패 · 승률 {kj_w / len(KJ) * 100:.0f}%",
+               "이긴 것도 진 것도 기억은 편향됩니다. 최근에 진 기억이 강하면 "
+               "통산 전적을 낮게 잡습니다."),
+        # 연도를 슬라이더로 물으면 오차율(|차이|/1954)이 너무 작아 다 맞는다 → 택1
+        choice("f3", "첫 한일전은 언제 열렸을까요?",
+               ["1950년대", "1960년대", "1970년대", "1980년대 이후"],
+               f"{kj_first_y // 10 * 10}년대" if kj_first_y < 1980 else "1980년대 이후",
+               f"{kj_first['date']} {kj_first['city']} · {kj_first['tournament']}",
+               "해방 뒤 채 10년이 되기 전에 이미 붙었습니다. '한일전 = 최근 일'이라는 "
+               "감각과 다릅니다."),
+        choice("f4", "그 첫 한일전의 결과는?",
+               ["한국 5-1 승", "일본 2-1 승", "0-0 무승부", "한국 1-0 승"],
+               kj_first_text,
+               f"{kj_first['date']} {kj_first['home_team']} {kj_first['home_score']} : "
+               f"{kj_first['away_score']} {kj_first['away_team']} ({kj_first['city']})",
+               "원정에서 넉 골 차. 첫 경기는 대개 '어렵게 이겼겠지'라고 짐작합니다."),
+        choice("f5", f"최근 10경기({kj_last10[0]['date'][:4]}~{kj_last_date[:4]}년) "
+                     "한일전 성적은?",
+               ["6승 2무 2패", "3승 3무 4패", "2승 3무 5패", "5승 1무 4패"],
+               kj_last10_text,
+               " · ".join(f"{r['date'][:4]} {score(r, KR)[0]}-{score(r, KR)[1]}"
+                         for r in kj_last10),
+               "통산 전적은 한국 우위지만 최근 10경기는 다릅니다. 어느 구간을 "
+               "자르느냐에 따라 '누가 강한가'의 답이 바뀝니다."),
+        choice("f6", "한국이 A매치를 가장 많이 치른 상대국은?",
+               ["일본", "중국", "이란", "태국"], top_opp,
+               " · ".join(f"{opp_name.get(k, k)} {v}경기" for k, v in opp_count),
+               "라이벌이라서 많이 만난 게 아니라, 많이 만나서 라이벌이 됐습니다. "
+               "2위가 말레이시아라는 것도 감으로는 안 나옵니다."),
+        slider("f7", f"한중전 {len(KC)}경기 중 한국이 진 경기는 몇 번일까요?",
+               kc_l, "패", 0, 20, 1,
+               f"{kc_w}승 {kc_d}무 {kc_l}패 · 진 해: "
+               + ", ".join(r["date"][:4] for r in kc_losses),
+               "'공한증'이라는 말이 있어도 0패는 아닙니다. 그렇다고 두 자릿수도 아닙니다."),
+        slider("f8", "한국이 월드컵 본선에서 거둔 승리는 통산 몇 번일까요?",
+               wc_kr_w, "승", 0, 30, 1,
+               f"{WC_KR[0]['date'][:4]}~{WC_KR[-1]['date'][:4]}년 본선 {len(WC_KR)}경기 "
+               f"{wdl_text(WC_KR, KR)}",
+               "2002년 4강의 기억이 크지만, 본선에서 이긴 경기는 손에 꼽습니다."),
+        choice("f9", "월드컵 본선 승수, 한국과 일본 중 누가 많을까요?",
+               ["한국이 많다", "일본이 많다", "같다"], wc_cmp,
+               f"한국 {len(WC_KR)}경기 {wdl_text(WC_KR, KR)} · "
+               f"일본 {len(WC_JP)}경기 {wdl_text(WC_JP, JP)}",
+               "한국이 본선에 더 많이 나갔지만 승수는 그만큼 벌어지지 않았습니다. "
+               "'더 오래 했다'와 '더 많이 이겼다'는 다른 숫자입니다."),
+        slider("f10", "한국의 A매치 역대 최다 점수차 승리는 몇 골 차일까요?",
+               _bw[0] - _bw[1], "골", 0, 20, 1,
+               f"{big_win['date']} 한국 {_bw[0]}-{_bw[1]} {opponent(big_win, KR)} "
+               f"({big_win['tournament']}) · 최다 실점 패배는 {big_loss['date']} "
+               f"{_bl[0]}-{_bl[1]} {opponent(big_loss, KR)}",
+               "큰 점수차는 강팀끼리가 아니라 예선 약체와의 경기에서 나옵니다."),
+    ],
+    caveat=f"자원봉사자가 정리한 기록이라 대한축구협회 공식 집계와 경기 수가 다릅니다 "
+           f"(협회 기준 한일전은 80경기가 넘습니다). 이 파일의 마지막 한일전은 "
+           f"{kj_last_date}로, 2025년 7월 EAFF E-1 결승 라운드가 빠져 있습니다. "
+           f"같은 '한일전 전적'도 어느 기록을 세느냐에 따라 달라집니다.")
+
+# ── 0-2. 위키백과 조회수 ─────────────────────────────────────────
+# 월간 상위 1000 문서만 있으므로 '연간 조회수'는 그 달들의 합, 즉 하한선이다.
+# 위키백과: 특수: 같은 관리용 문서는 뺀다.
+WIKI_NS = ("위키백과:", "특수:", "파일:", "분류:", "틀:", "도움말:", "포털:",
+           "사용자:", "토론:", "미디어위키:", "위키프로젝트:")
+
+
+def wiki_year(y):
+    """{문서: {월: 조회수}} — 그 해 월간 상위 1000위에 든 문서만."""
+    out: dict[str, dict[int, int]] = {}
+    for m in range(1, 13):
+        items = load_json(f"wiki_top_{y}{m:02d}.json")["items"][0]["articles"]
+        for a in items:
+            t = a["article"].replace("_", " ")
+            if t.startswith(WIKI_NS):
+                continue
+            out.setdefault(t, {})[m] = a["views"]
+    return out
+
+
+def wiki_total(views, title):
+    return sum(views.get(title, {}).values())
+
+
+WV24, WV25 = wiki_year(2024), wiki_year(2025)
+WY = 2025
+w_n_docs = len(WV25)
+w_all_year = [t for t, ms in WV25.items() if len(ms) == 12]
+w_one_month = [t for t, ms in WV25.items() if len(ms) == 1]
+w_one_pct = len(w_one_month) / w_n_docs * 100
+w_monthly_no1 = [max(((t, v.get(m, 0)) for t, v in WV25.items()),
+                     key=lambda kv: kv[1])[0] for m in range(1, 13)]
+w_top_doc = Counter(w_monthly_no1).most_common(1)[0]
+w_top_views = wiki_total(WV25, w_top_doc[0])
+pols = {"이재명": "이재명", "윤석열": "윤석열", "김문수": "김문수 (정치인)",
+        "김민석": "김민석 (정치인)"}
+pol_views = {k: wiki_total(WV25, v) for k, v in pols.items()}
+top_pol = max(pol_views, key=pol_views.get)
+yoon_24, yoon_25 = wiki_total(WV24, "윤석열"), wiki_total(WV25, "윤석열")
+martial_dec = WV24["계엄"][12]
+martial_dec_all = martial_dec + WV24.get("비상계엄", {}).get(12, 0)
+ge_apr = WV24["대한민국 제22대 국회의원 선거"][4]
+us_nov = WV24["2024년 미국 대통령 선거"][11]
+# 6월에 몰리는 문서: 두 해 모두 6월 상위 20위 안에 들고, 한 해 조회수 중
+# 6월 비중이 가장 높은 것. '러브버그 (곤충)'→'러브버그' 처럼 제목이 바뀌므로 괄호는 뗀다
+def _june_share(views):
+    rank_jun = sorted(((t, v.get(6, 0)) for t, v in views.items()),
+                      key=lambda kv: -kv[1])[:20]
+    return {t.split(" (")[0]: views[t][6] / sum(views[t].values())
+            for t, _ in rank_jun}
+_js24, _js25 = _june_share(WV24), _june_share(WV25)
+june_bug, june_share = max(((t, min(_js24[t], _js25[t]))
+                            for t in _js24.keys() & _js25.keys()),
+                           key=lambda kv: kv[1])
+shows = {"케이팝 데몬 헌터스": "케이팝 데몬 헌터스", "폭싹 속았수다": "폭싹 속았수다",
+         "원경왕후": "원경왕후", "오징어 게임": "오징어 게임"}
+show_views = {k: wiki_total(WV25, v) for k, v in shows.items()}
+top_show = max(show_views, key=show_views.get)
+
+topic(
+    "wiki", "📖", "우리는 위키백과에서 뭘 찾아봤나",
+    "2024~2025년 한국어 위키백과 월간 조회수 상위 1000 문서",
+    "Wikimedia Pageviews API", "https://wikimedia.org/api/rest_v1/",
+    [
+        choice("w1", f"{WY}년 열두 달 내내 한국어 위키백과 월간 조회수 1위였던 문서는?",
+               ["대한민국", "유튜브", "문화방송", "이재명"], w_top_doc[0],
+               f"{WY}년 12개월 중 {w_top_doc[1]}개월 1위 · 연간 합계 "
+               f"{w_top_views:,}회",
+               "매달 100만 회 넘게 조회된 방송사 문서. 사람이 본 것인지 자동화된 "
+               "접속인지 이 데이터는 구분해 주지 않습니다. 1위라고 다 사람이 아닙니다."),
+        slider("w2", f"{WY}년 한 해 동안 월간 상위 1000위에 한 번이라도 든 문서는 "
+                     "모두 몇 개일까요?",
+               w_n_docs, "개", 0, 12000, 100,
+               f"12개월 × 1000 = 최대 12,000개 중 실제로는 {w_n_docs:,}개 "
+               f"(관리용 문서 제외)",
+               "매달 순위가 완전히 바뀌면 12,000개, 전혀 안 바뀌면 1,000개입니다. "
+               "실제는 그 사이 어디쯤입니다."),
+        slider("w3", "그중 열두 달 모두 상위 1000위에 든 '개근' 문서는 몇 개일까요?",
+               len(w_all_year), "개", 0, 1000, 10,
+               f"{len(w_all_year)}개 · 예: "
+               + ", ".join(sorted(w_all_year, key=lambda t: -wiki_total(WV25, t))[3:8]),
+               "꾸준히 찾는 문서는 생각보다 적습니다. 대부분은 뉴스 따라 들어왔다 "
+               "나갑니다."),
+        slider("w4", "딱 한 달만 상위 1000위에 들고 사라진 문서는 전체의 몇 %일까요?",
+               w_one_pct, "%", 0, 100, 1,
+               f"{len(w_one_month):,}개 / {w_n_docs:,}개 = {w_one_pct:.0f}%",
+               "화제는 한 달을 못 갑니다. 절반 가까이가 '반짝' 문서입니다."),
+        choice("w5", f"대선이 있던 {WY}년, 위키백과에서 더 많이 찾아본 정치인은?",
+               list(pols), top_pol,
+               " · ".join(f"{k} {v:,}회" for k, v in
+                         sorted(pol_views.items(), key=lambda kv: -kv[1])),
+               "뉴스에 더 자주 나온 사람과 사람들이 직접 찾아본 사람은 다를 수 "
+               "있습니다."),
+        choice("w6", "'윤석열' 문서, 2024년과 2025년 중 조회수가 더 많았던 해는?",
+               ["2024년", "2025년"], "2024년" if yoon_24 > yoon_25 else "2025년",
+               f"2024년 {yoon_24:,}회 · 2025년 {yoon_25:,}회",
+               "탄핵이 결정된 해보다 계엄이 선포된 해가 더 많았습니다. 결말보다 "
+               "사건 당일에 사람들은 검색합니다."),
+        slider("w7", "2024년 12월 한 달 동안 '계엄' 문서는 몇 번 조회됐을까요?",
+               martial_dec / 10000, "만 회", 0, 200, 1,
+               f"'계엄' {martial_dec:,}회 · '비상계엄'까지 합치면 "
+               f"{martial_dec_all:,}회",
+               "그 달 위키백과 전체에서 방송사 문서를 빼면 1위였습니다. 단어 뜻을 "
+               "찾아본 사람이 그만큼 많았다는 뜻입니다."),
+        choice("w8", "2024년 4월 한국 총선과 11월 미국 대선, 한국어 위키백과에서 "
+                     "더 많이 본 문서는?",
+               ["한국 총선", "미국 대선"], "한국 총선" if ge_apr > us_nov else "미국 대선",
+               f"총선 문서 4월 {ge_apr:,}회 · 미국 대선 문서 11월 {us_nov:,}회",
+               "내 나라 선거인데 남의 나라 선거를 더 찾아봤습니다. 총선 정보는 "
+               "위키백과 밖(포털·선관위)에서 더 많이 봅니다."),
+        choice("w9", "2024년과 2025년 두 해 모두, 한 해 조회수가 6월에 몰려 있는 "
+                     "문서는?",
+               ["러브버그", "장마", "수능", "매미"], june_bug,
+               f"두 해 모두 6월 상위 20위 · 연간 조회수의 {june_share * 100:.0f}% "
+               f"이상이 6월 한 달에 몰림 (2025년 6월 "
+               f"{WV25.get('러브버그', {}).get(6, 0):,}회)",
+               "계절마다 돌아오는 검색어가 있습니다. 데이터는 그것까지 잡아냅니다."),
+        choice("w10", f"{WY}년 한 해 조회수가 가장 많았던 드라마·영화 문서는?",
+               list(shows), top_show,
+               " · ".join(f"{k} {v:,}회" for k, v in
+                         sorted(show_views.items(), key=lambda kv: -kv[1])),
+               "세계적으로 화제가 된 작품과 한국 사람들이 실제로 찾아본 작품은 "
+               "다를 수 있습니다."),
+    ],
+    caveat="월간 상위 1000위 문서만 받았으므로 '연간 조회수'는 그 달들의 합, 즉 "
+           "실제보다 작은 하한선입니다. 그리고 매달 1위인 방송사 문서처럼 사람이 "
+           "본 것과 자동화된 접속을 이 API 는 완전히 가려내지 못합니다. "
+           "조회수 1위가 곧 관심 1위는 아닙니다.")
 
 
 # ════════════════════════════════════════════════════════════════
@@ -630,7 +894,7 @@ def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     index = []
     for t in TOPICS:
-        assert len(t["questions"]) == 5, f"{t['id']}: 문항이 5개가 아닙니다"
+        assert len(t["questions"]) in (5, 10), f"{t['id']}: 문항이 5개도 10개도 아닙니다"
         pack = {k: t[k] for k in ("id", "emoji", "title", "blurb",
                                   "source", "source_url", "caveat")}
         pack["questions"] = t["questions"]
@@ -662,7 +926,8 @@ def main() -> None:
     }, ensure_ascii=False, indent=2))
 
     # 사람이 읽는 정답지
-    md = ["# 문항 정답지 — 10주제 50문항", "",
+    md = [f"# 문항 정답지 — {len(TOPICS)}주제 "
+          f"{sum(len(t['questions']) for t in TOPICS)}문항", "",
           "> 모든 값은 `데이터/raw/` 의 원본에서 `문항/build_topics.py` 가 계산합니다.", ""]
     for t in TOPICS:
         md += [f"## {t['emoji']} {t['title']}", "",

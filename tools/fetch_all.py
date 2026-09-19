@@ -107,6 +107,19 @@ SOURCES: list[tuple[str, str, str]] = [
      "?format=geojson&starttime=2000-01-01&endtime=2024-12-31"
      "&minmagnitude=3.0&minlatitude=33&maxlatitude=39.5"
      "&minlongitude=124&maxlongitude=132&limit=20000"),
+
+    ("football_results.csv",
+     "국가대표 A매치 전적 1872~ (martj42/international_results · GitHub)",
+     "https://raw.githubusercontent.com/martj42/international_results/"
+     "master/results.csv"),
+
+    # 위키미디어는 한 달치가 한 파일이라 24번 부른다. 빨리 부르면 429 를 내므로
+    # get() 의 재시도에 기댄다. User-Agent 가 없으면 아예 거절한다.
+    *[(f"wiki_top_{y}{m:02d}.json",
+       f"한국어 위키백과 {y}년 {m}월 조회수 상위 1000 문서 (Wikimedia Pageviews)",
+       "https://wikimedia.org/api/rest_v1/metrics/pageviews/top/"
+       f"ko.wikipedia/all-access/{y}/{m:02d}/all-days")
+      for y in (2024, 2025) for m in range(1, 13)],
 ]
 
 
